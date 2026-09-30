@@ -7,15 +7,17 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -28,5 +30,29 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * All outage reports created by this user.
+     */
+    public function outageReports(): HasMany
+    {
+        return $this->hasMany(OutageReport::class);
+    }
+
+    /**
+     * Only active outage reports owned by this user.
+     */
+    public function activeOutageReports(): HasMany
+    {
+        return $this->outageReports()->active();
+    }
+
+    /**
+     * Count currently active outage reports owned by this user.
+     */
+    public function activeReportsCount(): int
+    {
+        return $this->activeOutageReports()->count();
     }
 }
