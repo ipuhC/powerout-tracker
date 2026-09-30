@@ -1,0 +1,378 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "name": "Power Outage Tracker API",
+    "description": "Colección oficial de pruebas para la API RESTful de Power Outage Tracker (Laravel 13 + PostGIS + Sanctum).\n\nIncluye scripts automáticos para guardar el token Bearer en las variables de colección al iniciar sesión o registrarse.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication (Fase 2)",
+      "item": [
+        {
+          "name": "Login (Usuario Demo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set('auth_token', json.data.token);",
+                  "        console.log('Bearer Token guardado automáticamente:', json.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@powerout.test\",\n  \"password\": \"password\",\n  \"device_name\": \"postman\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Inicia sesión con las credenciales demo creadas por los seeders. Guarda automáticamente el token Bearer en `auth_token`."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Nuevo Usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set('auth_token', json.data.token);",
+                  "        console.log('Nuevo Bearer Token guardado:', json.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Carlos Mendoza\",\n  \"email\": \"carlos.{{$timestamp}}@ejemplo.com\",\n  \"password\": \"Password123!\",\n  \"password_confirmation\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Registra un nuevo usuario con email dinámico y emite inmediatamente un token Bearer."
+          },
+          "response": []
+        },
+        {
+          "name": "Perfil Actual (/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Retorna el perfil del usuario autenticado, su conteo de reportes activos y la cuota máxima permitida (3)."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout (Revocar Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('auth_token', '');",
+                  "    console.log('Bearer Token eliminado.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revoca el token activo en la base de datos."
+          },
+          "response": []
+        },
+        {
+          "name": "[Error Test] Login Credenciales Inválidas (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@powerout.test\",\n  \"password\": \"clave_incorrecta\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Prueba de error: verifica que credenciales erróneas retornen 401 con código INVALID_CREDENTIALS."
+          },
+          "response": []
+        },
+        {
+          "name": "[Error Test] Registro Validación Fallida (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"email\": \"correo_invalido\",\n  \"password\": \"corta\",\n  \"password_confirmation\": \"no_coincide\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Prueba de error: verifica que datos inválidos retornen 422 con código VALIDATION_ERROR y detalles por campo."
+          },
+          "response": []
+        },
+        {
+          "name": "[Error Test] Perfil sin Token / No Autenticado (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Prueba de error: verifica que intentar acceder a un endpoint protegido sin Bearer token retorne 401 UNAUTHENTICATED."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Public Outages Map (Fase 3 Preview)",
+      "item": [
+        {
+          "name": "Mapa Público (Bounding Box Carabobo)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/public/outages?min_lat=10.1500&min_lng=-68.0500&max_lat=10.3000&max_lng=-67.9000",
+              "host": ["{{base_url}}"],
+              "path": ["public", "outages"],
+              "query": [
+                {
+                  "key": "min_lat",
+                  "value": "10.1500"
+                },
+                {
+                  "key": "min_lng",
+                  "value": "-68.0500"
+                },
+                {
+                  "key": "max_lat",
+                  "value": "10.3000"
+                },
+                {
+                  "key": "max_lng",
+                  "value": "-67.9000"
+                }
+              ]
+            },
+            "description": "Consulta pública que filtra cortes activos en el viewport de Valencia/Carabobo con PostGIS GiST. Cero PII."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Reports Management (Fase 3 Preview)",
+      "item": [
+        {
+          "name": "Crear Reporte de Corte (El Viñedo, Valencia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 10.213500,\n  \"longitude\": -68.005200,\n  \"radius_km\": 2.0,\n  \"duration_type\": \"fixed\",\n  \"duration_hours\": 4,\n  \"description\": \"Transformador explotó en El Viñedo cerca de la Av. Carlos Sanda\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reports",
+              "host": ["{{base_url}}"],
+              "path": ["reports"]
+            },
+            "description": "Crea un nuevo reporte de corte de energía asociado al usuario autenticado (controlando cuota de 3)."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Mis Reportes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports?page=1",
+              "host": ["{{base_url}}"],
+              "path": ["reports"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Retorna la lista paginada de reportes (activos y pasados) pertenecientes al usuario autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "Cerrar Reporte (\"Llegó la luz\")",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/1/close",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "1", "close"]
+            },
+            "description": "Cierra manualmente un reporte activo marcando status=closed y registrando closed_at."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

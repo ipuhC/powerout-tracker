@@ -17,15 +17,15 @@ class OutageReportFactory extends Factory
 
     /**
      * Define the model's default state.
-     * Generates realistic outages centered in the New York City metropolitan area.
+     * Generates realistic outages centered in Estado Carabobo, Venezuela (Valencia, Naguanagua, San Diego).
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
-        // NYC Bounding Range: Lat 40.65 - 40.85, Lng -74.05 - -73.85
-        $latitude = $this->faker->latitude(40.6800, 40.8200);
-        $longitude = $this->faker->longitude(-74.0300, -73.9000);
+        // Carabobo (Valencia Metropolitan Area): Lat 10.1500 - 10.2800, Lng -68.0400 - -67.9200
+        $latitude = $this->faker->latitude(10.1600, 10.2700);
+        $longitude = $this->faker->longitude(-68.0400, -67.9300);
         $durationType = $this->faker->randomElement([DurationType::FIXED, DurationType::UNTIL_CLOSED]);
         $durationHours = $durationType === DurationType::FIXED ? $this->faker->numberBetween(1, 24) : null;
         $createdAt = now()->subMinutes($this->faker->numberBetween(5, 180));
@@ -44,12 +44,14 @@ class OutageReportFactory extends Factory
             'duration_type' => $durationType,
             'duration_hours' => $durationHours,
             'description' => $this->faker->randomElement([
-                'Transformer blew up near 8th Ave and 42nd St.',
-                'Entire block without electricity since heavy winds started.',
-                'Traffic lights and brownstones pitch dark.',
-                'Substation maintenance failure impacting multiple residential towers.',
-                'Underground cable issue reported by utility crew.',
-                'Power flickering and now completely cut off.',
+                'Explosión de transformador en la Av. Bolívar Norte cerca de El Viñedo.',
+                'Falla en la subestación La Quizanda afectando varias urbanizaciones.',
+                'Sector El Trigal Norte sin servicio eléctrico tras fuertes lluvias.',
+                'Avería en circuito de distribución en Naguanagua cerca de La Granja.',
+                'Apagón general en San Diego por caída de línea de media tensión.',
+                'Fluctuaciones severas (bajones) y corte total en Mañongo y Tazajal.',
+                'Corte imprevisto afectando comercios y residencias en Prebo.',
+                'Sector Las Chimeneas y Los Mangos a oscuras desde horas de la tarde.',
             ]),
             'status' => OutageStatus::ACTIVE,
             'closed_at' => null,

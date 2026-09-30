@@ -17,14 +17,15 @@ class OutageReportModelTest extends TestCase
     {
         $user = User::factory()->create();
 
+        // Valencia, Carabobo, Venezuela (El Viñedo)
         $report = OutageReport::create([
             'user_id' => $user->id,
-            'latitude' => 40.712776,
-            'longitude' => -74.005974,
+            'latitude' => 10.213500,
+            'longitude' => -68.005200,
             'radius_km' => 2.50,
             'duration_type' => DurationType::FIXED,
             'duration_hours' => 4,
-            'description' => 'Substation explosion on 5th Ave',
+            'description' => 'Falla en subestación Guaparo dejando sin servicio a El Viñedo',
         ]);
 
         $this->assertDatabaseHas('outage_reports', [
@@ -35,8 +36,8 @@ class OutageReportModelTest extends TestCase
 
         $fresh = OutageReport::find($report->id);
 
-        $this->assertEqualsWithDelta(40.712776, $fresh->latitude, 0.0001);
-        $this->assertEqualsWithDelta(-74.005974, $fresh->longitude, 0.0001);
+        $this->assertEqualsWithDelta(10.213500, $fresh->latitude, 0.0001);
+        $this->assertEqualsWithDelta(-68.005200, $fresh->longitude, 0.0001);
         $this->assertEquals(OutageStatus::ACTIVE, $fresh->status);
         $this->assertEquals(DurationType::FIXED, $fresh->duration_type);
         $this->assertGreaterThan(0, $fresh->remaining_seconds);
@@ -46,21 +47,21 @@ class OutageReportModelTest extends TestCase
     {
         $user = User::factory()->create();
 
-        // 1. Valid Active report
+        // 1. Valid Active report in El Trigal, Valencia
         $activeReport = OutageReport::create([
             'user_id' => $user->id,
-            'latitude' => 40.758000,
-            'longitude' => -73.985500,
+            'latitude' => 10.218000,
+            'longitude' => -67.986000,
             'radius_km' => 1.5,
             'duration_type' => DurationType::FIXED,
             'duration_hours' => 4,
         ]);
 
-        // 2. Report whose expires_at is past, but status column is still 'active' (scheduler delayed scenario)
+        // 2. Report whose expires_at is past, but status column is still 'active' (scheduler delayed scenario) in Las Chimeneas
         $staleReport = OutageReport::create([
             'user_id' => $user->id,
-            'latitude' => 40.760000,
-            'longitude' => -73.982000,
+            'latitude' => 10.225000,
+            'longitude' => -67.982000,
             'radius_km' => 1.0,
             'duration_type' => DurationType::FIXED,
             'duration_hours' => 2,
@@ -79,30 +80,30 @@ class OutageReportModelTest extends TestCase
     {
         $user = User::factory()->create();
 
-        // Inside NYC Manhattan envelope (Lat 40.70 to 40.80, Lng -74.02 to -73.95)
-        $manhattanReport = OutageReport::create([
+        // Inside Valencia, Carabobo envelope (Lat 10.15 to 10.30, Lng -68.05 to -67.90)
+        $valenciaReport = OutageReport::create([
             'user_id' => $user->id,
-            'latitude' => 40.750000,
-            'longitude' => -73.990000,
+            'latitude' => 10.210000,
+            'longitude' => -68.005000,
             'radius_km' => 1.0,
             'duration_type' => DurationType::FIXED,
             'duration_hours' => 2,
         ]);
 
-        // Far outside in Los Angeles (Lat ~34.05, Lng ~-118.24)
-        $laReport = OutageReport::create([
+        // Outside in Caracas, Venezuela (Lat ~10.49, Lng ~-66.88)
+        $caracasReport = OutageReport::create([
             'user_id' => $user->id,
-            'latitude' => 34.052200,
-            'longitude' => -118.243700,
+            'latitude' => 10.488000,
+            'longitude' => -66.879000,
             'radius_km' => 1.0,
             'duration_type' => DurationType::FIXED,
             'duration_hours' => 2,
         ]);
 
-        $results = OutageReport::withinBoundingBox(40.70, -74.05, 40.80, -73.90)->pluck('id')->all();
+        $results = OutageReport::withinBoundingBox(10.15, -68.05, 10.30, -67.90)->pluck('id')->all();
 
-        $this->assertContains($manhattanReport->id, $results);
-        $this->assertNotContains($laReport->id, $results);
+        $this->assertContains($valenciaReport->id, $results);
+        $this->assertNotContains($caracasReport->id, $results);
     }
 
     public function test_expiration_calculation_respects_72_hour_hard_cap(): void
@@ -127,8 +128,8 @@ class OutageReportModelTest extends TestCase
 
         OutageReport::create([
             'user_id' => $user->id,
-            'latitude' => 40.71,
-            'longitude' => -74.01,
+            'latitude' => 10.21,
+            'longitude' => -68.00,
             'radius_km' => 1.0,
             'duration_type' => DurationType::FIXED,
             'duration_hours' => 3,
