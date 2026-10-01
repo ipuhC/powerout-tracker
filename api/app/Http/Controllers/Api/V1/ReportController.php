@@ -81,11 +81,12 @@ class ReportController extends Controller
         if ($request->has('duration_type')) {
             $report->duration_type = $request->duration_type;
             $report->duration_hours = $request->duration_hours;
-            
-            // Recalculate expires_at based on new duration
+
+            // Use $request->duration_type (raw string) — $report->duration_type is already
+            // cast to a DurationType enum by Eloquent and cannot be passed to ::from() again.
             $report->expires_at = OutageReport::calculateExpiresAt(
-                \App\Enums\DurationType::from($report->duration_type),
-                $report->duration_hours,
+                \App\Enums\DurationType::from($request->duration_type),
+                $request->duration_hours,
                 $report->created_at
             );
         }
