@@ -38,11 +38,12 @@ class ReportController extends Controller
     {
         $user = $request->user();
 
-        // Enforce quota
-        if ($user->activeReportsCount() >= 3) {
+        // Enforce quota (configurable via OUTAGE_MAX_ACTIVE_REPORTS env var)
+        $maxActive = (int) env('OUTAGE_MAX_ACTIVE_REPORTS', 3);
+        if ($user->activeReportsCount() >= $maxActive) {
             return $this->errorResponse(
                 'QUOTA_EXCEEDED',
-                'You can only have up to 3 active reports at a time.',
+                "You can only have up to {$maxActive} active reports at a time.",
                 null,
                 422
             );

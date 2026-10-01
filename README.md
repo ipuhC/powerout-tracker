@@ -243,7 +243,7 @@ To ensure evaluators can run the project **without paying, signing up, or creati
 ### Architectural Decoupling: Adapter Pattern
 
 The map implementation is strictly encapsulated behind an abstract React adapter component:
-[`client/src/components/map/OutageMap.tsx`](file:///home/manuel/proyectos/prueba-tecnica/client/src/components/map/OutageMap.tsx)
+[`client/src/components/map/OutageMap.tsx`](client/src/components/map/OutageMap.tsx)
 
 No screen or view interacts directly with the underlying map SDK. The component exposes a generic, provider-agnostic interface:
 
@@ -309,8 +309,8 @@ The seeder initializes **3 test users** and **realistic sample outages** centere
 
 - [x] **Strict TypeScript & Modular Design System (Bonus B4):** Fully typed frontend codebase (`strict: true`) with custom design tokens (`--color-accent: #E5484D`, subtle technical grid background, window panels with 3-dot headers, and Lucide icon integration).
 - [x] **Container Health Checks & Least-Privilege Security (Bonus B7):** Complete service healthchecks (`pg_isready`, `redis-cli ping`), unprivileged container execution (`www-data` non-root user in Alpine PHP-FPM), and persistent named volumes.
-- [x] **Anti-Abuse Rate Limiting & User Quotas (Bonus B9):** Enforces a maximum of 5 report creations per hour (`throttle:5,60`) and restricts authenticated users to a maximum of 3 concurrent active reports (`OUTAGE_MAX_ACTIVE_REPORTS=3`).
-- [x] **Comprehensive Postman Collection:** Ready-to-import [`postman_collection.json`](file:///home/manuel/proyectos/prueba-tecnica/postman_collection.json) featuring test scripts that automatically capture and persist the Bearer token into collection variables upon login or registration.
+- [x] **Anti-Abuse Rate Limiting & User Quotas (Bonus B9):** Enforces a configurable maximum of reports per hour (`OUTAGE_MAX_REPORTS_PER_HOUR`, default 5) via a named rate limiter, and restricts authenticated users to a configurable maximum of concurrent active reports (`OUTAGE_MAX_ACTIVE_REPORTS`, default 3).
+- [x] **Comprehensive Postman Collection:** Ready-to-import [`postman_collection.json`](postman_collection.json) featuring test scripts that automatically capture and persist the Bearer token into collection variables upon login or registration.
 
 ---
 

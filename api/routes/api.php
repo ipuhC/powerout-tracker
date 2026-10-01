@@ -34,9 +34,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'throttle:api-authenticated'])->group(function () {
         Route::get('/reports', [\App\Http\Controllers\Api\V1\ReportController::class, 'index'])->name('reports.index');
         
-        // Custom rate limiting for report creation: 5 requests per hour (60 minutes)
+        // Report creation rate limiting: driven by OUTAGE_MAX_REPORTS_PER_HOUR env var (default 5/hr)
         Route::post('/reports', [\App\Http\Controllers\Api\V1\ReportController::class, 'store'])
-            ->middleware('throttle:5,60')
+            ->middleware('throttle:report-creation')
             ->name('reports.store');
             
         Route::patch('/reports/{report}', [\App\Http\Controllers\Api\V1\ReportController::class, 'update'])->name('reports.update');

@@ -37,9 +37,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->ip());
         });
 
-        // Rate Limiter: Outage report creation (5 reports / hr per user)
+        // Rate Limiter: Outage report creation — configurable via OUTAGE_MAX_REPORTS_PER_HOUR env var
         RateLimiter::for('report-creation', function (Request $request) {
-            return Limit::perHour(5)->by($request->user()?->id ?: $request->ip());
+            $maxPerHour = (int) env('OUTAGE_MAX_REPORTS_PER_HOUR', 5);
+
+            return Limit::perHour($maxPerHour)->by($request->user()?->id ?: $request->ip());
         });
     }
 }
