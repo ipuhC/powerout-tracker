@@ -308,6 +308,10 @@ class OutageReport extends Model
      */
     public function scopeWithCoordinates(Builder $query): Builder
     {
+        if (empty($query->getQuery()->columns)) {
+            $query->select($this->getTable() . '.*');
+        }
+
         return $query->addSelect([
             'latitude' => DB::raw('ST_Y(location::geometry)'),
             'longitude' => DB::raw('ST_X(location::geometry)'),

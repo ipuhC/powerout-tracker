@@ -5,6 +5,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     // -------------------------------------------------------------------------
+    // Public Endpoints
+    // -------------------------------------------------------------------------
+    Route::prefix('public')->group(function () {
+        Route::get('/outages', [\App\Http\Controllers\Api\V1\PublicOutageController::class, 'index'])->name('public.outages.index');
+    });
+
+    // -------------------------------------------------------------------------
     // Authentication Endpoints (Bearer Tokens via Laravel Sanctum)
     // -------------------------------------------------------------------------
     Route::prefix('auth')->group(function () {
@@ -19,5 +26,20 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
             Route::get('/me', [AuthController::class, 'me'])->name('auth.me');
         });
+    });
+
+    // -------------------------------------------------------------------------
+    // Reports Management API
+    // -------------------------------------------------------------------------
+    Route::middleware(['auth:sanctum', 'throttle:api-authenticated'])->group(function () {
+        Route::get('/reports', [\App\Http\Controllers\Api\V1\ReportController::class, 'index'])->name('reports.index');
+        
+        // Custom rate limiting for report creation: 5 requests per hour (60 minutes)
+        Route::post('/reports', [\App\Http\Controllers\Api\V1\ReportController::class, 'store'])
+            ->middleware('throttle:5,60')
+            ->name('reports.store');
+            
+        Route::patch('/reports/{report}', [\App\Http\Controllers\Api\V1\ReportController::class, 'update'])->name('reports.update');
+        Route::post('/reports/{report}/close', [\App\Http\Controllers\Api\V1\ReportController::class, 'close'])->name('reports.close');
     });
 });
