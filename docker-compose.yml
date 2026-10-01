@@ -23,6 +23,7 @@ services:
     volumes:
       - ./api:/var/www/html
     environment:
+      - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
       - DB_DATABASE=${DB_DATABASE:-powerout_db}
@@ -30,6 +31,10 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-powerout_secret}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - REDIS_CLIENT=phpredis
     depends_on:
       db:
         condition: service_healthy
@@ -106,6 +111,7 @@ services:
     volumes:
       - ./api:/var/www/html
     environment:
+      - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
       - DB_DATABASE=${DB_DATABASE:-powerout_db}
@@ -113,6 +119,10 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-powerout_secret}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - REDIS_CLIENT=phpredis
     depends_on:
       api:
         condition: service_started
@@ -134,6 +144,7 @@ services:
     volumes:
       - ./api:/var/www/html
     environment:
+      - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
       - DB_DATABASE=${DB_DATABASE:-powerout_db}
@@ -141,6 +152,10 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-powerout_secret}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - REDIS_CLIENT=phpredis
     depends_on:
       api:
         condition: service_started
