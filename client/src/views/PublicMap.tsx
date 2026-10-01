@@ -1,0 +1,97 @@
+import { useEffect, useState } from 'react';
+import { OutageMap } from '@/components/map/OutageMap';
+import { useOutageStore } from '@/store/useOutageStore';
+import { Bounds } from '@/types';
+
+export function PublicMap() {
+  const { outages, fetchOutages, isLoading } = useOutageStore();
+  const [bounds, setBounds] = useState<Bounds | null>(null);
+
+  useEffect(() => {
+    if (!bounds) return;
+    
+    fetchOutages(bounds);
+    
+    const intervalId = setInterval(() => {
+      fetchOutages(bounds);
+    }, 30000); // Poll every 30s
+    
+    return () => clearInterval(intervalId);
+  }, [bounds, fetchOutages]);
+
+  return (
+    <div className="w-full flex flex-col items-center p-4 md:p-8 overflow-y-auto">
+      
+      {/* Map Section */}
+      <div className="w-full md:w-[85%] h-[50vh] md:h-[70vh] rounded-[24px] overflow-hidden border border-border/50 shadow-xl relative shrink-0 transition-all duration-300 hover:shadow-2xl">
+        <OutageMap 
+          center={[10.2020, -68.0077]} // Default Valencia
+          zoom={12}
+          outages={outages}
+          interactive={true}
+          onBoundsChange={setBounds}
+        />
+        
+        {/* Overlay Stats */}
+        <div className="absolute bottom-6 left-6 z-[400] glass p-4 rounded-[16px] pointer-events-none transition-all duration-300">
+          {isLoading ? (
+             <p className="text-sm font-mono text-text-muted flex items-center gap-2">
+               <span className="w-2 h-2 rounded-full border border-text-muted border-t-transparent animate-spin"></span>
+               Fetching live data...
+             </p>
+          ) : (
+             <p className="text-sm font-mono text-accent font-bold flex items-center gap-2 text-lg">
+               <span className="w-3 h-3 rounded-full bg-accent animate-pulse shadow-[0_0_10px_var(--color-accent)]"></span>
+               {outages.length} active outages
+             </p>
+          )}
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="w-full md:w-[85%] mt-12 mb-12">
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+          <span className="bg-accent/10 text-accent p-2 rounded-lg">📊</span>
+          Latest Active Reports in View
+        </h2>
+        
+        {outages.length === 0 ? (
+          <div className="p-12 text-center text-text-muted border border-border/50 rounded-[20px] bg-surface/50 border-dashed">
+            <span className="text-4xl mb-4 block opacity-50">✨</span>
+            <p className="text-lg">No active outages reported in this area.</p>
+            <p className="text-sm opacity-70">Everything is running smoothly.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto border border-border/50 rounded-[20px] bg-surface/30 backdrop-blur-sm shadow-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-surface/80 border-b border-border/50 font-mono text-text-muted uppercase text-xs tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 font-medium">ID</th>
+                  <th className="px-4 py-3 font-medium">Started</th>
+                  <th className="px-4 py-3 font-medium">Radius</th>
+                  <th className="px-4 py-3 font-medium">Location</th>
+                  <th className="px-4 py-3 font-medium w-full">Description</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {outages.slice(0, 10).map((outage) => (
+                  <tr key={outage.id} className="hover:bg-bg transition-colors">
+                    <td className="px-4 py-3 font-mono text-accent">#{outage.id}</td>
+                    <td className="px-4 py-3">{new Date(outage.created_at).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono">{outage.radius_km.toFixed(1)} km</td>
+                    <td className="px-4 py-3 font-mono text-text-muted text-xs">
+                      {outage.latitude.toFixed(4)}, {outage.longitude.toFixed(4)}
+                    </td>
+                    <td className="px-4 py-3 truncate max-w-xs text-text-muted">
+                      {outage.description || 'No description provided'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

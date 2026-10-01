@@ -1,22 +1,35 @@
 import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { PublicMap } from '@/views/PublicMap';
+import { ReportCreation } from '@/views/ReportCreation';
+import { MyReports } from '@/views/MyReports';
+import { Login } from '@/views/Login';
+import { Register } from '@/views/Register';
 
 function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
         {/* Public Routes */}
-        <Route path="/" element={<div className="p-8 flex items-center justify-center h-full"><h1 className="text-2xl font-mono text-accent">Map Integration Pending (Phase 5)</h1></div>} />
-        <Route path="/login" element={<div className="p-8">Login View Placeholder</div>} />
-        <Route path="/register" element={<div className="p-8">Register View Placeholder</div>} />
+        <Route path="/" element={<PublicMap />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Protected Routes */}
+        <Route 
+          path="/report" 
+          element={
+            <ProtectedRoute>
+              <ReportCreation />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/my-reports" 
           element={
             <ProtectedRoute>
-              <div className="p-8">My Reports View Placeholder</div>
+              <MyReports />
             </ProtectedRoute>
           } 
         />

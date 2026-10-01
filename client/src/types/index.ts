@@ -5,12 +5,15 @@ export interface PointLocation {
 
 export interface Outage {
   id: number;
-  radius_meters: number;
-  starts_at: string;
-  duration_hours: number | null;
-  status: 'active' | 'resolved' | 'expired';
-  location: PointLocation;
+  radius_km: number;
+  latitude: number;
+  longitude: number;
+  status: 'active' | 'closed' | 'expired';
+  description?: string;
+  remaining_seconds?: number;
+  duration_hours?: number; // From user's private reports
   created_at: string;
+  expires_at?: string;
 }
 
 export interface Bounds {

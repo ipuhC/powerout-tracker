@@ -2,7 +2,6 @@ import axios from 'axios';
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
-  withCredentials: true, // required if using sanctum SPA cookies, though we will use Bearer token
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',

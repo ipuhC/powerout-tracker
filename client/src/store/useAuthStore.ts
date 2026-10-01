@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       set({ isLoading: true, error: null });
-      const response = await apiClient.get('/auth/user');
+      const response = await apiClient.get('/auth/me');
       set({ user: response.data.data || response.data, isAuthenticated: true, isLoading: false });
     } catch (error) {
       console.error("Auth check failed:", error);

@@ -7,21 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "var(--color-bg)",
-        grid: "var(--color-grid)",
-        text: "var(--color-text)",
-        "text-muted": "var(--color-text-muted)",
-        accent: "var(--color-accent)",
-        "accent-soft": "var(--color-accent-soft)",
-        border: "var(--color-border)",
-        surface: "var(--color-surface)",
+        bg: "rgb(var(--color-bg) / <alpha-value>)",
+        grid: "rgb(var(--color-grid) / <alpha-value>)",
+        text: "rgb(var(--color-text) / <alpha-value>)",
+        "text-muted": "rgb(var(--color-text-muted) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
+        "accent-soft": "rgb(var(--color-accent-soft) / <alpha-value>)",
+        border: "rgb(var(--color-border) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
       },
       borderRadius: {
         DEFAULT: "var(--radius)",
       },
       fontFamily: {
-        sans: ['Inter', 'Helvetica Neue', 'sans-serif'],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        sans: ['Outfit', 'Inter', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
     },
   },

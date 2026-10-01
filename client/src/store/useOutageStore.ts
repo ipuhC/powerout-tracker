@@ -19,7 +19,8 @@ export const useOutageStore = create<OutageState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await apiClient.get('/public/outages', { params: bounds });
-      set({ outages: response.data.data, isLoading: false });
+      const outages = response.data?.data?.outages || response.data?.data || [];
+      set({ outages: outages, isLoading: false });
     } catch (err) {
       set({ error: err, isLoading: false });
     }
