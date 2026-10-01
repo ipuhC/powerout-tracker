@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { LandingPage } from '@/views/LandingPage';
 import { PublicMap } from '@/views/PublicMap';
 import { ReportCreation } from '@/views/ReportCreation';
 import { MyReports } from '@/views/MyReports';
@@ -12,30 +13,31 @@ function App() {
     <Routes>
       <Route element={<AppLayout />}>
         {/* Public Routes */}
-        <Route path="/" element={<PublicMap />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/map" element={<PublicMap />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
         {/* Protected Routes */}
-        <Route 
-          path="/report" 
+        <Route
+          path="/report"
           element={
             <ProtectedRoute>
               <ReportCreation />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/my-reports" 
+        <Route
+          path="/my-reports"
           element={
             <ProtectedRoute>
               <MyReports />
             </ProtectedRoute>
-          } 
+          }
         />
       </Route>
     </Routes>
   );
 }
 
-export default App
+export default App;

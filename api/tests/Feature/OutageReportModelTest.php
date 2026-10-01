@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DurationType;
 use App\Enums\OutageStatus;
+use App\Jobs\ExpireOutagesJob;
 use App\Models\OutageReport;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -136,5 +137,48 @@ class OutageReportModelTest extends TestCase
         ]);
 
         $this->assertEquals(1, $user->fresh()->activeReportsCount());
+    }
+
+    public function test_expire_outages_job_marks_expired_records(): void
+    {
+        $user = User::factory()->create();
+
+        // Report that should be expired by the job (expires_at in the past, status still 'active')
+        $expiredByJob = OutageReport::create([
+            'user_id'       => $user->id,
+            'latitude'      => 10.215000,
+            'longitude'     => -68.003000,
+            'radius_km'     => 1.5,
+            'duration_type' => DurationType::FIXED,
+            'duration_hours'=> 2,
+            'status'        => OutageStatus::ACTIVE,
+            'created_at'    => now()->subHours(5),
+            'expires_at'    => now()->subHour(), // already past
+        ]);
+
+        // Report that should remain active (expires_at in the future)
+        $stillActive = OutageReport::create([
+            'user_id'       => $user->id,
+            'latitude'      => 10.220000,
+            'longitude'     => -67.990000,
+            'radius_km'     => 1.0,
+            'duration_type' => DurationType::FIXED,
+            'duration_hours'=> 6,
+        ]);
+
+        // Run the scheduler job synchronously (no queue needed)
+        ExpireOutagesJob::dispatchSync();
+
+        // The stale record must now be marked expired in the database
+        $this->assertDatabaseHas('outage_reports', [
+            'id'     => $expiredByJob->id,
+            'status' => OutageStatus::EXPIRED->value,
+        ]);
+
+        // The valid active record must remain untouched
+        $this->assertDatabaseHas('outage_reports', [
+            'id'     => $stillActive->id,
+            'status' => OutageStatus::ACTIVE->value,
+        ]);
     }
 }

@@ -6,15 +6,15 @@
 
 @layer base {
   :root {
-    --color-bg: 248 250 252;
-    --color-grid: 226 232 240;
-    --color-text: 15 23 42;
-    --color-text-muted: 100 116 139;
-    --color-accent: 244 63 94;
-    --color-accent-soft: 255 228 230;
-    --color-border: 226 232 240;
-    --color-surface: 255 255 255;
-    --radius: 12px;
+    --color-bg: 255 255 255;
+    --color-grid: 241 241 241;
+    --color-text: 17 17 17;
+    --color-text-muted: 85 85 85;
+    --color-accent: 229 72 77;
+    --color-accent-soft: 253 236 236;
+    --color-border: 228 228 228;
+    --color-surface: 245 245 245;
+    --radius: 8px;
   }
 
   html.dark {
@@ -22,11 +22,12 @@
     --color-grid: 24 24 27;
     --color-text: 248 250 252;
     --color-text-muted: 161 161 170;
-    --color-accent: 244 63 94;
+    --color-accent: 229 72 77;
     --color-accent-soft: 76 29 149;
     --color-border: 39 39 42;
     --color-surface: 18 18 20;
   }
+
 
   body {
     @apply bg-bg text-text font-sans antialiased transition-colors duration-300;

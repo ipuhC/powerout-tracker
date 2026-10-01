@@ -66,7 +66,7 @@ export const AppLayout: React.FC = () => {
                 <p className="text-sm text-text-muted">Watch live updates as power is restored by the community.</p>
               </div>
             </div>
-            <Button variant="primary" className="w-full mt-8 py-3 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => setShowHelpModal(false)}>Got it!</Button>
+            <Button variant="default"  className="w-full mt-8 py-3 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => setShowHelpModal(false)}>Got it!</Button>
           </div>
         </div>
       )}
@@ -76,7 +76,10 @@ export const AppLayout: React.FC = () => {
         <div className="p-4 flex flex-col gap-6 mt-4">
           <nav className="flex flex-col gap-2">
             <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-[12px] hover:bg-surface/50 hover:text-accent transition-colors font-medium text-sm">
-              <span className="text-xl">🗺️</span> Map
+              <span className="text-xl">🏠</span> Home
+            </Link>
+            <Link to="/map" className="flex items-center gap-3 px-4 py-3 rounded-[12px] hover:bg-surface/50 hover:text-accent transition-colors font-medium text-sm">
+              <span className="text-xl">🗺️</span> Live Map
             </Link>
             
             {isAuthenticated ? (
