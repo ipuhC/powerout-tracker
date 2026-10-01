@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle, useMap, useMapEvents, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { Circle as LeafletCircle } from 'leaflet';
 import { Outage } from '../../types';
 
 export interface OutageMapProps {
@@ -12,15 +13,79 @@ export interface OutageMapProps {
   interactive?: boolean;
   onLocationSelect?: (coords: { lat: number; lng: number }) => void;
   onBoundsChange?: (bounds: { min_lat: number; min_lng: number; max_lat: number; max_lng: number }) => void;
+  /** ID of the outage to highlight with a distinct color in the map */
+  highlightedId?: number | null;
+  /** Setting this triggers a flyTo animation to the outage + opens its popup */
+  flyToId?: number | null;
 }
 
-function MapEvents({ 
-  interactive, 
-  onLocationSelect, 
+// ---------------------------------------------------------------------------
+// Sub-component: programmatic flyTo + popup open after animation
+// ---------------------------------------------------------------------------
+function FlyToOutage({
+  flyToId,
+  outages,
+  circleRefs,
+}: {
+  flyToId: number | null | undefined;
+  outages: Outage[];
+  circleRefs: React.MutableRefObject<Map<number, LeafletCircle>>;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!flyToId) return;
+    const outage = outages.find((o) => o.id === flyToId);
+    if (!outage) return;
+
+    map.flyTo([outage.latitude, outage.longitude], 15, { duration: 1.2 });
+
+    // Open the popup after the fly animation finishes (~1.3s)
+    const timer = setTimeout(() => {
+      const circle = circleRefs.current.get(flyToId);
+      circle?.openPopup();
+    }, 1350);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flyToId]);
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: sync map view when center/zoom props change
+// ---------------------------------------------------------------------------
+function CenterUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  const prevCenter = useRef(center);
+  const prevZoom = useRef(zoom);
+
+  useEffect(() => {
+    if (
+      prevCenter.current[0] !== center[0] ||
+      prevCenter.current[1] !== center[1] ||
+      prevZoom.current !== zoom
+    ) {
+      map.setView(center, zoom);
+      prevCenter.current = center;
+      prevZoom.current = zoom;
+    }
+  }, [center, zoom, map]);
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-component: map event handlers (click, moveend)
+// ---------------------------------------------------------------------------
+function MapEvents({
+  interactive,
+  onLocationSelect,
   onBoundsChange,
-  setPinnedId
-}: { 
-  interactive?: boolean; 
+  setPinnedId,
+}: {
+  interactive?: boolean;
   onLocationSelect?: (coords: { lat: number; lng: number }) => void;
   onBoundsChange?: (bounds: { min_lat: number; min_lng: number; max_lat: number; max_lng: number }) => void;
   setPinnedId: (id: number | null) => void;
@@ -30,7 +95,7 @@ function MapEvents({
       if (interactive && onLocationSelect) {
         onLocationSelect(e.latlng);
       }
-      setPinnedId(null); // Unpin if clicking on map
+      setPinnedId(null);
     },
     moveend() {
       if (onBoundsChange) {
@@ -42,7 +107,7 @@ function MapEvents({
           max_lng: bounds.getEast(),
         });
       }
-    }
+    },
   });
 
   useEffect(() => {
@@ -61,22 +126,9 @@ function MapEvents({
   return null;
 }
 
-function CenterUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  const prevCenter = useRef(center);
-  const prevZoom = useRef(zoom);
-
-  useEffect(() => {
-    if (prevCenter.current[0] !== center[0] || prevCenter.current[1] !== center[1] || prevZoom.current !== zoom) {
-      map.setView(center, zoom);
-      prevCenter.current = center;
-      prevZoom.current = zoom;
-    }
-  }, [center, zoom, map]);
-
-  return null;
-}
-
+// ---------------------------------------------------------------------------
+// Main exported component
+// ---------------------------------------------------------------------------
 export function OutageMap({
   center,
   zoom = 13,
@@ -85,15 +137,27 @@ export function OutageMap({
   radiusKm,
   interactive = false,
   onLocationSelect,
-  onBoundsChange
+  onBoundsChange,
+  highlightedId,
+  flyToId,
 }: OutageMapProps) {
   const [pinnedId, setPinnedId] = useState<number | null>(null);
 
+  // Map<outageId, LeafletCircle> — used to imperatively open popups
+  const circleRefs = useRef<Map<number, LeafletCircle>>(new Map());
+
+  // When an external highlight is requested, pin that popup too
+  useEffect(() => {
+    if (highlightedId != null) {
+      setPinnedId(highlightedId);
+    }
+  }, [highlightedId]);
+
   return (
     <div className="w-full h-full relative z-0">
-      <MapContainer 
-        center={center} 
-        zoom={zoom} 
+      <MapContainer
+        center={center}
+        zoom={zoom}
         style={{ width: '100%', height: '100%' }}
         dragging={interactive}
         scrollWheelZoom={interactive}
@@ -103,89 +167,107 @@ export function OutageMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
+
         <CenterUpdater center={center} zoom={zoom} />
-        
-        <MapEvents 
-          interactive={interactive} 
-          onLocationSelect={onLocationSelect} 
+
+        <MapEvents
+          interactive={interactive}
+          onLocationSelect={onLocationSelect}
           onBoundsChange={onBoundsChange}
           setPinnedId={setPinnedId}
         />
 
-        {outages.map((outage) => (
-          <Circle
-            key={outage.id}
-            center={[outage.latitude, outage.longitude]}
-            radius={outage.radius_km * 1000}
-            pathOptions={{ 
-              color: 'var(--color-accent)', 
-              fillColor: 'var(--color-accent)', 
-              fillOpacity: 0.2,
-              weight: 2 
-            }}
-            eventHandlers={{
-              mouseover: (e) => {
-                if (pinnedId !== outage.id) {
-                  e.target.openPopup();
-                }
-              },
-              mouseout: (e) => {
-                if (pinnedId !== outage.id) {
-                  e.target.closePopup();
-                }
-              },
-              click: (e) => {
-                if (pinnedId === outage.id) {
-                  setPinnedId(null);
-                  e.target.closePopup();
-                } else {
-                  setPinnedId(outage.id);
-                  e.target.openPopup();
-                }
-              },
-              popupclose: () => {
-                if (pinnedId === outage.id) {
-                  setPinnedId(null);
-                }
+        <FlyToOutage flyToId={flyToId} outages={outages} circleRefs={circleRefs} />
+
+        {outages.map((outage) => {
+          const isHighlighted = outage.id === highlightedId;
+
+          return (
+            <Circle
+              key={outage.id}
+              center={[outage.latitude, outage.longitude]}
+              radius={outage.radius_km * 1000}
+              // Store layer ref so we can call openPopup() programmatically
+              ref={(layer: LeafletCircle | null) => {
+                if (layer) circleRefs.current.set(outage.id, layer);
+                else circleRefs.current.delete(outage.id);
+              }}
+              pathOptions={
+                isHighlighted
+                  ? {
+                      color: 'var(--color-accent)',
+                      fillColor: 'var(--color-accent)',
+                      fillOpacity: 0.45,
+                      weight: 4,
+                    }
+                  : {
+                      color: 'var(--color-accent)',
+                      fillColor: 'var(--color-accent)',
+                      fillOpacity: 0.15,
+                      weight: 2,
+                    }
               }
-            }}
-          >
-            <Popup>
-              <div className="font-sans p-1">
-                <h3 className="font-bold text-sm mb-1">Outage Details</h3>
-                <p className="text-xs text-text-muted mb-2">Radius: {outage.radius_km.toFixed(1)} km</p>
-                <div className="flex gap-2 text-xs mb-1">
-                  <span className="font-bold">Started:</span>
-                  <span>{new Date(outage.created_at).toLocaleString()}</span>
-                </div>
-                {outage.duration_hours && (
+              eventHandlers={{
+                mouseover: (e) => {
+                  if (pinnedId !== outage.id) e.target.openPopup();
+                },
+                mouseout: (e) => {
+                  if (pinnedId !== outage.id) e.target.closePopup();
+                },
+                click: (e) => {
+                  if (pinnedId === outage.id) {
+                    setPinnedId(null);
+                    e.target.closePopup();
+                  } else {
+                    setPinnedId(outage.id);
+                    e.target.openPopup();
+                  }
+                },
+                popupclose: () => {
+                  if (pinnedId === outage.id) setPinnedId(null);
+                },
+              }}
+            >
+              <Popup>
+                <div className="font-sans p-1">
+                  <h3 className="font-bold text-sm mb-1">Outage Details</h3>
+                  <p className="text-xs text-text-muted mb-2">
+                    Radius: {outage.radius_km.toFixed(1)} km
+                  </p>
                   <div className="flex gap-2 text-xs mb-1">
-                    <span className="font-bold">Duration:</span>
-                    <span>{outage.duration_hours} hours</span>
+                    <span className="font-bold">Started:</span>
+                    <span>{new Date(outage.created_at).toLocaleString()}</span>
                   </div>
-                )}
-                {outage.description && (
-                  <div className="flex flex-col text-xs mt-2 border-t border-border pt-1">
-                    <span className="font-bold">Description:</span>
-                    <span className="italic text-text-muted break-words">{outage.description}</span>
-                  </div>
-                )}
-              </div>
-            </Popup>
-          </Circle>
-        ))}
+                  {outage.duration_hours && (
+                    <div className="flex gap-2 text-xs mb-1">
+                      <span className="font-bold">Duration:</span>
+                      <span>{outage.duration_hours} hours</span>
+                    </div>
+                  )}
+                  {outage.description && (
+                    <div className="flex flex-col text-xs mt-2 border-t border-border pt-1">
+                      <span className="font-bold">Description:</span>
+                      <span className="italic text-text-muted break-words">
+                        {outage.description}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Circle>
+          );
+        })}
 
         {selectedLocation && radiusKm && (
           <Circle
             center={[selectedLocation.lat, selectedLocation.lng]}
             radius={radiusKm * 1000}
-            pathOptions={{ 
-              color: 'var(--color-accent)', 
-              fillColor: 'var(--color-accent)', 
+            pathOptions={{
+              color: 'var(--color-accent)',
+              fillColor: 'var(--color-accent)',
               fillOpacity: 0.4,
               weight: 3,
-              dashArray: '5, 5'
+              dashArray: '5, 5',
             }}
           />
         )}
