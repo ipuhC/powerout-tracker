@@ -7,7 +7,7 @@
 [![PostgreSQL 16 + PostGIS](https://img.shields.io/badge/PostGIS-3.5%20%7C%20Postgres%2016-336791?logo=postgresql&logoColor=white)](https://postgis.net)
 [![Redis 7](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io)
 
-A production-grade, real-time power outage reporting platform built as a senior full-stack technical assessment. The platform enables citizens to visualize active electrical blackouts on an interactive live map and empowers authenticated users to report, update, and resolve power outages with custom geospatial radii (0.5 km to 25 km).
+A production-grade, real-time power outage reporting platform that enables citizens to visualize active electrical blackouts on an interactive live map and empowers authenticated users to report, update, and resolve power outages with custom geospatial radii (0.5 km to 25 km).
 
 ---
 
