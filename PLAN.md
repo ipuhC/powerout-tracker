@@ -184,19 +184,57 @@ This project is a full-stack, real-time power outage reporting platform built as
 ---
 
 ## 5. Retrospective (Post-Implementation)
-*(To be completed after final delivery without modifying original estimates above)*
+*(Original estimates preserved above — actuals added below without modification)*
 
-- **Estimated Time vs. Actual Time Spent:**
-  - *Phase 0:* Estimated 2.5 h | Actual: TBD
-  - *Phase 1:* Estimated 2.5 h | Actual: TBD
-  - *Phase 2:* Estimated 3.5 h | Actual: TBD
-  - *Phase 3:* Estimated 3.5 h | Actual: TBD
-  - *Phase 4:* Estimated 3.0 h | Actual: TBD
-  - *Phase 5:* Estimated 3.5 h | Actual: TBD
-  - *Phase 6:* Estimated 2.0 h | Actual: TBD
-  - *Phase 7:* Estimated 0.5 h | Actual: TBD
-  - *Total:* Estimated 21.0 h | Actual: TBD
-- **Deviations & Root Causes:**
-  - *TBD*
-- **What would be done differently with more time:**
-  - *TBD*
+### 5.1 Estimated vs. Actual Time Spent
+
+| Phase | Description | Estimated | Actual |
+|---|---|---|---|
+| **Phase 0** | Planning, Architecture & Design | 2.5 h | ~1.5 h |
+| **Phase 1** | Docker Infrastructure | 2.5 h | ~1.0 h |
+| **Phase 2** | Backend Core: PostGIS, Models & Auth | 3.5 h | ~0.7 h |
+| **Phase 3** | Backend Reports API & Spatial Engine | 3.5 h | ~1.3 h |
+| **Phase 4** | Frontend Architecture & Design System | 3.0 h | ~0.8 h |
+| **Phase 5** | Map Adapter, Public Map & Views | 3.5 h | ~1.5 h |
+| **Phase 6** | Tests & OpenAPI Documentation | 2.0 h | ~0.5 h |
+| **Phase 7** | Clean Install Verification | 0.5 h | ~0.2 h |
+| **Total** | | **21.0 h** | **~7.5 h** |
+
+*Timestamps derived from git log: first commit `2026-09-29 20:14` → final commit `2026-10-01 01:20`. Total calendar span: ~29 h over 2 days; effective active coding time was approximately 7–8 hours.*
+
+---
+
+### 5.2 Deviations & Root Causes
+
+1. **Phase 2 significantly under estimate (~0.7 h vs 3.5 h):**
+   Laravel 13 and PostGIS scaffolding is very fast when you know the stack. The `postgis/postgis:16-alpine` image already includes all spatial extensions; `CREATE EXTENSION postgis` in a migration was the only extra step. The 3.5 h estimate over-allocated for potential driver research that wasn't needed.
+
+2. **Phase 5 significantly under estimate (~1.5 h vs 3.5 h):**
+   The shadcn/ui component library significantly accelerated UI development (Dialog, Badge, Card, Button out-of-the-box). The estimated time assumed more custom component authoring.
+
+3. **Phase 6 significantly under estimate (~0.5 h vs 2.0 h):**
+   The test suite was written incrementally alongside the backend implementation (Phases 2–3), so "Phase 6" required only adding the `ExpireOutagesJob` integration test and fixing test isolation via `Cache::flush()`. The original estimate assumed writing all tests from scratch after the feature code.
+
+4. **Unplanned polish and adjustments (~0.5 h total):**
+   - Landing page hero section was refined from the initial Fase 5 scope (the route `/` was enhanced with the hero and public map preview).
+   - Design token values were aligned strictly with the spec palette.
+   - Rate limiter test isolation was solved by replacing per-key `RateLimiter::clear()` with a global `Cache::flush()` in `TestCase::setUp()`.
+
+---
+
+### 5.3 Features That Would Be Added With More Time
+
+1. **Zone Subscriptions & Push Notifications:**
+   Users would be able to save one or more home addresses or areas of interest (e.g. "My house", "My office"). When a new outage is reported in any of those registered zones, the platform would automatically:
+   - Send an **in-app notification** alerting the user that power has gone out in a saved location.
+   - Send a **transactional email** (via Laravel Mail + a queue job) including the name of the affected zone, the reported radius, and an estimated duration — giving the user actionable information even if they are not actively using the app.
+   On the backend this would be implemented as a `zone_subscriptions` table, a `NotifyZoneSubscribersJob` dispatched after each new outage report is created, and a `ZoneSubscriptionController` exposing CRUD endpoints for managing saved addresses.
+
+2. **Corpoelec Contact Information Page:**
+   A dedicated informational section displaying the official contact details for Corpoelec (Venezuela's national electricity corporation), including regional phone numbers, emergency lines, social media channels and the official outage-reporting form. This would give citizens a direct channel to report outages to the utility in addition to the community map, and serve as a practical reference during a blackout.
+
+3. **Native Mobile Application:**
+   A React Native version of the SPA (sharing the existing API and Zustand state-management logic) would significantly expand the platform's reach. Mobile users would additionally benefit from:
+   - **Location auto-detection** to pre-fill the outage location using the device GPS.
+   - **Push notifications** via FCM (Firebase Cloud Messaging) integrated with the zone-subscription system above, so users receive alerts even when the app is closed.
+   - **Offline-first map caching** of the last-known outage state for areas with poor connectivity during a city-wide blackout.

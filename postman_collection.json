@@ -2,206 +2,82 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
     "name": "Power Outage Tracker API",
-    "description": "Colecci\u00f3n oficial de pruebas para la API RESTful de Power Outage Tracker (Laravel 13 + PostGIS + Sanctum).\n\nIncluye scripts autom\u00e1ticos para guardar el token Bearer en las variables de colecci\u00f3n al iniciar sesi\u00f3n o registrarse.",
+    "description": "Colección oficial de la API RESTful de Power Outage Tracker (Laravel 13 + PostGIS + Sanctum).\n\nIncluye assertions automáticas en cada request que verifican:\n- Status HTTP correcto\n- Estructura del JSON de respuesta\n- Ausencia de PII en endpoints públicos\n- Captura automática del Bearer Token al hacer login o register\n\n**Orden de ejecución recomendado:** ejecuta en secuencia. El token se propaga automáticamente.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8080/api/v1",
-      "type": "string"
-    },
-    {
-      "key": "auth_token",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "base_url",    "value": "http://localhost:8080/api/v1", "type": "string" },
+    { "key": "auth_token",  "value": "",  "type": "string" },
+    { "key": "report_id",   "value": "",  "type": "string" }
   ],
   "item": [
     {
-      "name": "1. Authentication (Fase 2)",
+      "name": "1. Authentication",
       "item": [
         {
-          "name": "Login (Usuario Demo)",
+          "name": "POST /auth/login — OK (200)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var json = pm.response.json();",
-                  "    if (json.data && json.data.token) {",
-                  "        pm.collectionVariables.set('auth_token', json.data.token);",
-                  "        console.log('Bearer Token guardado autom\u00e1ticamente:', json.data.token);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has data.token', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.nested.property('data.token');",
+                  "    pm.expect(j).to.have.nested.property('data.user.id');",
+                  "    pm.expect(j).to.have.nested.property('data.user.email');",
+                  "    pm.collectionVariables.set('auth_token', j.data.token);",
+                  "});",
+                  "pm.test('No PII leaks (no password in response)', () => {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.not.include('password');",
+                  "});"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"demo@powerout.test\",\n  \"password\": \"password\",\n  \"device_name\": \"postman\"\n}"
+              "raw": "{\n  \"email\": \"demo@powerout.test\",\n  \"password\": \"password\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
             },
-            "description": "Inicia sesi\u00f3n con las credenciales demo creadas por los seeders. Guarda autom\u00e1ticamente el token Bearer en `auth_token`."
-          },
-          "response": []
+            "description": "Login con el usuario demo creado por los seeders. Guarda automáticamente el Bearer Token."
+          }
         },
         {
-          "name": "Register Nuevo Usuario",
+          "name": "POST /auth/login — FAIL Invalid Credentials (401)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    var json = pm.response.json();",
-                  "    if (json.data && json.data.token) {",
-                  "        pm.collectionVariables.set('auth_token', json.data.token);",
-                  "        console.log('Nuevo Bearer Token guardado:', json.data.token);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Error code INVALID_CREDENTIALS', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.error.code).to.eql('INVALID_CREDENTIALS');",
+                  "});"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Carlos Mendoza\",\n  \"email\": \"carlos.{{$timestamp}}@ejemplo.com\",\n  \"password\": \"Password123!\",\n  \"password_confirmation\": \"Password123!\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "description": "Registra un nuevo usuario con email din\u00e1mico y emite inmediatamente un token Bearer."
-          },
-          "response": []
-        },
-        {
-          "name": "Perfil Actual (/me)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "me"
-              ]
-            },
-            "description": "Retorna el perfil del usuario autenticado, su conteo de reportes activos y la cuota m\u00e1xima permitida (3)."
-          },
-          "response": []
-        },
-        {
-          "name": "Logout (Revocar Token)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    pm.collectionVariables.set('auth_token', '');",
-                  "    console.log('Bearer Token eliminado.');",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "Revoca el token activo en la base de datos."
-          },
-          "response": []
-        },
-        {
-          "name": "[Error Test] Login Credenciales Inv\u00e1lidas (401)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -209,31 +85,35 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/login",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "description": "Prueba de error: verifica que credenciales err\u00f3neas retornen 401 con c\u00f3digo INVALID_CREDENTIALS."
-          },
-          "response": []
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
         },
         {
-          "name": "[Error Test] Registro Validaci\u00f3n Fallida (422)",
+          "name": "POST /auth/register — FAIL Validation (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error code VALIDATION_ERROR', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.error.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(j.error.details).to.have.property('email');",
+                  "    pm.expect(j.error.details).to.have.property('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -241,261 +121,436 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/register",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "description": "Prueba de error: verifica que datos inv\u00e1lidos retornen 422 con c\u00f3digo VALIDATION_ERROR y detalles por campo."
-          },
-          "response": []
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
         },
         {
-          "name": "[Error Test] Perfil sin Token / No Autenticado (401)",
+          "name": "GET /auth/me — OK (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has user profile fields', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.nested.property('data.user.id');",
+                  "    pm.expect(j).to.have.nested.property('data.user.name');",
+                  "    pm.expect(j).to.have.nested.property('data.user.email');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Accept",        "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
             ],
             "url": {
               "raw": "{{base_url}}/auth/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "auth",
-                "me"
-              ]
-            },
-            "description": "Prueba de error: verifica que intentar acceder a un endpoint protegido sin Bearer token retorne 401 UNAUTHENTICATED."
-          },
-          "response": []
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "GET /auth/me — FAIL Unauthenticated (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "2. Public Outages Map (Fase 3)",
+      "name": "2. Public Outage Map",
       "item": [
         {
-          "name": "Mapa P\u00fablico (Bounding Box Carabobo)",
+          "name": "GET /public/outages — OK Bounding Box Valencia (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has data.outages array', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.data.outages).to.be.an('array');",
+                  "});",
+                  "pm.test('Zero PII in response (no user_id, email, name)', () => {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.not.include('\"user_id\"');",
+                  "    pm.expect(body).to.not.include('\"email\"');",
+                  "    pm.expect(body).to.not.include('\"user\":{');",
+                  "});",
+                  "pm.test('Each outage has required spatial fields', () => {",
+                  "    const outages = pm.response.json().data.outages;",
+                  "    if (outages.length > 0) {",
+                  "        const o = outages[0];",
+                  "        pm.expect(o).to.have.property('latitude');",
+                  "        pm.expect(o).to.have.property('longitude');",
+                  "        pm.expect(o).to.have.property('radius_km');",
+                  "        pm.expect(o).to.have.property('expires_at');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
+              { "key": "Accept", "value": "application/json" }
             ],
             "url": {
               "raw": "{{base_url}}/public/outages?min_lat=10.1500&min_lng=-68.0500&max_lat=10.3000&max_lng=-67.9000",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "public",
-                "outages"
-              ],
+              "host": ["{{base_url}}"],
+              "path": ["public", "outages"],
               "query": [
-                {
-                  "key": "min_lat",
-                  "value": "10.1500"
-                },
-                {
-                  "key": "min_lng",
-                  "value": "-68.0500"
-                },
-                {
-                  "key": "max_lat",
-                  "value": "10.3000"
-                },
-                {
-                  "key": "max_lng",
-                  "value": "-67.9000"
-                }
+                { "key": "min_lat", "value": "10.1500" },
+                { "key": "min_lng", "value": "-68.0500" },
+                { "key": "max_lat", "value": "10.3000" },
+                { "key": "max_lng", "value": "-67.9000" }
               ]
             },
-            "description": "Consulta p\u00fablica que filtra cortes activos en el viewport de Valencia/Carabobo con PostGIS GiST. Cero PII."
-          },
-          "response": []
+            "description": "Consulta pública filtrada por bounding box de Carabobo. Verifica cero PII."
+          }
+        },
+        {
+          "name": "GET /public/outages — FAIL Missing Params (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error code VALIDATION_ERROR', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.error.code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/public/outages",
+              "host": ["{{base_url}}"],
+              "path": ["public", "outages"]
+            },
+            "description": "Sin parámetros de bounding box — debe retornar 422 VALIDATION_ERROR."
+          }
         }
       ]
     },
     {
-      "name": "3. Reports Management (Fase 3)",
+      "name": "3. Reports Management",
       "item": [
         {
-          "name": "Crear Reporte de Corte (El Vi\u00f1edo, Valencia)",
+          "name": "POST /reports — OK Crear Reporte (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Report created with correct fields', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.nested.property('data.report.id');",
+                  "    pm.expect(j.data.report.status).to.eql('active');",
+                  "    pm.expect(j.data.report.radius_km).to.eql(2.0);",
+                  "    pm.expect(j.data.report.duration_type).to.eql('fixed');",
+                  "    // Save ID for subsequent PATCH and close tests",
+                  "    pm.collectionVariables.set('report_id', j.data.report.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" },
+              { "key": "Authorization","value": "Bearer {{auth_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"latitude\": 10.213500,\n  \"longitude\": -68.005200,\n  \"radius_km\": 2.0,\n  \"duration_type\": \"fixed\",\n  \"duration_hours\": 4,\n  \"description\": \"Transformador explot\u00f3 en El Vi\u00f1edo cerca de la Av. Carlos Sanda\"\n}"
+              "raw": "{\n  \"latitude\": 10.213500,\n  \"longitude\": -68.005200,\n  \"radius_km\": 2.0,\n  \"duration_type\": \"fixed\",\n  \"duration_hours\": 4,\n  \"description\": \"Transformador explotó en El Viñedo cerca de Av. Carlos Sanda\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/reports",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "reports"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["reports"]
             },
-            "description": "Crea un nuevo reporte de corte de energ\u00eda asociado al usuario autenticado (controlando cuota de 3)."
-          },
-          "response": []
+            "description": "Crea un reporte activo. El ID se guarda automáticamente en {{report_id}} para los tests siguientes."
+          }
         },
         {
-          "name": "Listar Mis Reportes",
+          "name": "POST /reports — FAIL Validación Datos Inválidos (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error code VALIDATION_ERROR with field details', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.error.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(j.error.details).to.have.property('latitude');",
+                  "    pm.expect(j.error.details).to.have.property('longitude');",
+                  "    pm.expect(j.error.details).to.have.property('radius_km');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" },
+              { "key": "Authorization","value": "Bearer {{auth_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 999,\n  \"longitude\": 999,\n  \"radius_km\": 50\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/reports",
+              "host": ["{{base_url}}"],
+              "path": ["reports"]
+            }
+          }
+        },
+        {
+          "name": "GET /reports — OK Listar Mis Reportes (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has paginated reports array', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.data.reports).to.be.an('array');",
+                  "    pm.expect(j.data.meta).to.have.property('total');",
+                  "    pm.expect(j.data.meta).to.have.property('current_page');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
+              { "key": "Accept",        "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
             ],
             "url": {
               "raw": "{{base_url}}/reports?page=1",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "reports"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                }
-              ]
-            },
-            "description": "Retorna la lista paginada de reportes (activos y pasados) pertenecientes al usuario autenticado."
-          },
-          "response": []
+              "host": ["{{base_url}}"],
+              "path": ["reports"],
+              "query": [{ "key": "page", "value": "1" }]
+            }
+          }
         },
         {
-          "name": "Actualizar Reporte (Modificar Radio o Duraci\u00f3n)",
+          "name": "PATCH /reports/:id — OK Actualizar Reporte (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Report updated correctly', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.data.report.radius_km).to.eql(5.0);",
+                  "    pm.expect(j.data.report.description).to.include('afecta más cuadras');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" },
+              { "key": "Authorization","value": "Bearer {{auth_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"radius_km\": 5.0,\n  \"description\": \"Actualizaci\u00f3n: el problema parece afectar m\u00e1s cuadras.\"\n}"
+              "raw": "{\n  \"radius_km\": 5.0,\n  \"description\": \"Actualización: el problema afecta más cuadras.\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/reports/1",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "reports",
-                "1"
-              ]
+              "raw": "{{base_url}}/reports/{{report_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "{{report_id}}"]
             },
-            "description": "Actualiza la informaci\u00f3n de un reporte activo (por ejemplo, el radio de afectaci\u00f3n o la descripci\u00f3n)."
-          },
-          "response": []
+            "description": "Actualiza el reporte creado en el step anterior (ID guardado en {{report_id}})."
+          }
         },
         {
-          "name": "Cerrar Reporte (\"Lleg\u00f3 la luz\")",
+          "name": "POST /reports/:id/close — OK Cerrar Reporte (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Report status is now closed', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.data.report.status).to.eql('closed');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
-              }
+              { "key": "Accept",        "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
             ],
             "url": {
-              "raw": "{{base_url}}/reports/1/close",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "reports",
-                "1",
-                "close"
-              ]
+              "raw": "{{base_url}}/reports/{{report_id}}/close",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "{{report_id}}", "close"]
             },
-            "description": "Cierra manualmente un reporte activo marcando status=closed y registrando closed_at."
-          },
-          "response": []
+            "description": "Cierra el reporte creado anteriormente. Usa {{report_id}} dinámico."
+          }
         },
         {
-          "name": "[Error Test] Exceder Cuota de Reportes (422)",
+          "name": "POST /reports/:id/close — FAIL Reporte Ajeno (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 403 or 404', () => {",
+                  "    pm.expect([403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{auth_token}}"
+              { "key": "Accept",        "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/99999/close",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "99999", "close"]
+            },
+            "description": "Intenta cerrar un reporte que no existe o no pertenece al usuario. Debe retornar 403 o 404."
+          }
+        },
+        {
+          "name": "POST /reports — FAIL Unauthenticated (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
               }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept",       "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"latitude\": 10.213500,\n  \"longitude\": -68.005200,\n  \"radius_km\": 2.0,\n  \"duration_type\": \"fixed\",\n  \"duration_hours\": 4,\n  \"description\": \"Intento de crear un cuarto reporte activo.\"\n}"
+              "raw": "{\n  \"latitude\": 10.21,\n  \"longitude\": -68.00,\n  \"radius_km\": 2.0,\n  \"duration_type\": \"fixed\",\n  \"duration_hours\": 4\n}"
             },
             "url": {
               "raw": "{{base_url}}/reports",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "reports"
-              ]
+              "host": ["{{base_url}}"],
+              "path": ["reports"]
             },
-            "description": "Prueba de error: intenta crear un cuarto reporte cuando el usuario ya tiene 3 activos. Debe retornar 422 QUOTA_EXCEEDED."
-          },
-          "response": []
+            "description": "Intento sin token — debe retornar 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Logout",
+      "item": [
+        {
+          "name": "POST /auth/logout — OK (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Logout confirmation message', () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.data).to.have.property('message');",
+                  "});",
+                  "pm.collectionVariables.set('auth_token', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept",        "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{auth_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revoca el token activo. Limpia auth_token de la colección."
+          }
         }
       ]
     }

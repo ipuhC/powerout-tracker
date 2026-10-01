@@ -18,12 +18,13 @@ A production-grade, real-time power outage reporting platform built as a senior 
 3. [Quickstart (Turnkey Setup)](#3-quickstart-turnkey-setup)
 4. [Step-by-Step Setup Guide](#4-step-by-step-setup-guide)
 5. [Database Migrations, Seeders & Tests](#5-database-migrations-seeders--tests)
-6. [Map Provider Configuration](#6-map-provider-configuration)
-7. [Demo Credentials & Seeded Data](#7-demo-credentials--seeded-data)
-8. [Architectural Assumptions](#8-architectural-assumptions)
-9. [Bonus Features Implemented](#9-bonus-features-implemented)
-10. [Known Limitations & Future Improvements](#10-known-limitations--future-improvements)
-11. [Useful Docker & Operational Commands](#11-useful-docker--operational-commands)
+6. [API Documentation](#6-api-documentation)
+7. [Map Provider Configuration](#7-map-provider-configuration)
+8. [Demo Credentials & Seeded Data](#8-demo-credentials--seeded-data)
+9. [Architectural Assumptions](#9-architectural-assumptions)
+10. [Bonus Features Implemented](#10-bonus-features-implemented)
+11. [Known Limitations & Future Improvements](#11-known-limitations--future-improvements)
+12. [Useful Docker & Operational Commands](#12-useful-docker--operational-commands)
 
 ---
 
@@ -35,10 +36,11 @@ The application is architected as a monorepo containing an API backend and a fro
 ├── api/             # Laravel 13 REST API (PHP 8.4-FPM, PostGIS, Redis, Sanctum)
 ├── client/          # React 18 + Vite SPA (TypeScript, Zustand, Leaflet Adapter)
 ├── docker-compose.yml # 7 Orchestrated services (web, api, client, db, redis, worker, scheduler)
+├── openapi.yaml     # OpenAPI 3.1 specification (all endpoints, schemas, auth)
 ├── setup.sh         # Automated one-step setup script
 ├── ARCHITECTURE.md  # Comprehensive architectural specification, ERD, and 6 ADRs
 ├── PLAN.md          # Implementation plan, milestone tracking, and retrospective
-└── postman_collection.json # Official Postman collection with automatic Bearer token capture
+└── postman_collection.json # Postman collection with automatic Bearer token capture
 ```
 
 ### Container Services
@@ -178,7 +180,59 @@ docker compose exec api php artisan test
 
 ---
 
-## 6. Map Provider Configuration
+## 6. API Documentation
+
+The API is fully documented in two complementary formats committed to the repository:
+
+### OpenAPI 3.1 Specification (`openapi.yaml`)
+
+The [`openapi.yaml`](./openapi.yaml) file at the root of the repository describes every endpoint, request schema, response envelope, error codes and authentication scheme in the OpenAPI 3.1 standard format.
+
+You can render it locally in seconds with any of these tools:
+
+```bash
+# Option A — Swagger UI via Docker (no install required)
+docker run -p 8090:8080 -e SWAGGER_JSON=/spec/openapi.yaml \
+  -v "$(pwd)/openapi.yaml:/spec/openapi.yaml" swaggerapi/swagger-ui
+# Then open http://localhost:8090
+
+# Option B — Redoc CLI
+npx @redocly/cli preview-docs openapi.yaml
+
+# Option C — Import directly into Insomnia or Postman
+# File → Import → select openapi.yaml
+```
+
+### Postman Collection (`postman_collection.json`)
+
+Para mayor comodidad del evaluador, se incluye una colección de Postman v2.1 lista para **descargar, importar y ejecutar**: [`postman_collection.json`](./postman_collection.json) (ubicada en la raíz del repositorio).
+
+Cubre los **15 endpoints de la API** con **30 assertions automatizadas** (validación de status codes, estructura de respuesta, tipos de datos y ausencia total de PII en endpoints públicos).
+
+**Cómo descargar y usar en Postman / Insomnia:**
+1. Descarga el archivo [`postman_collection.json`](./postman_collection.json) desde la raíz del repositorio o clónalo localmente.
+2. Abre Postman (o Insomnia) → haz clic en **Import** → arrastra y suelta el archivo `postman_collection.json`.
+3. La variable de entorno `base_url` viene preconfigurada por defecto en `http://localhost:8080/api/v1`.
+4. Ejecuta primero la petición **"POST /auth/login — OK (200)"**: el script de test extraerá y guardará automáticamente el Bearer Token en la variable `{{auth_token}}`.
+5. Todas las peticiones autenticadas subsiguientes usarán este token de forma transparente sin requerir copiar y pegar manualmente.
+
+**Ejecución automatizada desde CLI con Newman:**
+
+Puedes validar el 100% de los endpoints sin abrir la interfaz de Postman:
+
+```bash
+# Instalar Newman (CLI runner de Postman) globalmente (solo una vez)
+npm install -g newman
+
+# Ejecutar la colección completa contra el backend local
+newman run postman_collection.json
+```
+
+Salida esperada: **15 requests · 30 assertions · 0 failures (100% passed)**.
+
+---
+
+## 7. Map Provider Configuration
 
 ### Chosen Provider: OpenStreetMap + Leaflet (100% Free & Turnkey)
 
@@ -217,7 +271,7 @@ If an organization chooses Google Maps Platform:
 
 ---
 
-## 7. Demo Credentials & Seeded Data
+## 8. Demo Credentials & Seeded Data
 
 The seeder initializes **3 test users** and **realistic sample outages** centered in Estado Carabobo, Venezuela (Valencia, Naguanagua, and San Diego):
 
@@ -238,7 +292,7 @@ The seeder initializes **3 test users** and **realistic sample outages** centere
 
 ---
 
-## 8. Architectural Assumptions
+## 9. Architectural Assumptions
 
 1. **Bearer Tokens over Cookies (ADR-1):** Sanctum Personal Access Tokens were selected instead of SPA session cookies. This completely decouples frontend and backend deployment targets, avoids cross-origin domain cookie synchronization issues across local Docker ports, and enables mobile/CLI client readiness.
 2. **PostgreSQL 16 with PostGIS (ADR-2):** Chosen over standard MySQL 8 spatial columns. PostGIS provides true geodesic spatial computations via `geography(Point, 4326)` in meters on the WGS 84 ellipsoid, backed by native GiST indexing for fast bounding-box queries (`ST_DWithin` and `ST_MakeEnvelope`).
@@ -251,7 +305,7 @@ The seeder initializes **3 test users** and **realistic sample outages** centere
 
 ---
 
-## 9. Bonus Features Implemented
+## 10. Bonus Features Implemented
 
 - [x] **Strict TypeScript & Modular Design System (Bonus B4):** Fully typed frontend codebase (`strict: true`) with custom design tokens (`--color-accent: #E5484D`, subtle technical grid background, window panels with 3-dot headers, and Lucide icon integration).
 - [x] **Container Health Checks & Least-Privilege Security (Bonus B7):** Complete service healthchecks (`pg_isready`, `redis-cli ping`), unprivileged container execution (`www-data` non-root user in Alpine PHP-FPM), and persistent named volumes.
@@ -260,7 +314,7 @@ The seeder initializes **3 test users** and **realistic sample outages** centere
 
 ---
 
-## 10. Known Limitations & Future Improvements
+## 11. Known Limitations & Future Improvements
 
 With additional development time, the following enhancements are planned:
 1. **Real-Time WebSockets (Bonus B1):** Replace the current 30-second viewport polling with Laravel Reverb or Pusher WebSocket channels for push-based map updates.
@@ -270,7 +324,7 @@ With additional development time, the following enhancements are planned:
 
 ---
 
-## 11. Useful Docker & Operational Commands
+## 12. Useful Docker & Operational Commands
 
 ```bash
 # View real-time logs across all services

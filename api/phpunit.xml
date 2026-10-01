@@ -24,12 +24,18 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="pgsql"/>
-        <env name="DB_HOST" value="db"/>
-        <env name="DB_PORT" value="5432"/>
-        <env name="DB_DATABASE" value="powerout_test"/>
-        <env name="DB_USERNAME" value="admin"/>
-        <env name="DB_PASSWORD" value="admin"/>
+        <server name="DB_CONNECTION" value="pgsql" force="true"/>
+        <server name="DB_HOST" value="db" force="true"/>
+        <server name="DB_PORT" value="5432" force="true"/>
+        <server name="DB_DATABASE" value="powerout_test" force="true"/>
+        <server name="DB_USERNAME" value="powerout_user" force="true"/>
+        <server name="DB_PASSWORD" value="powerout_secret" force="true"/>
+        <env name="DB_CONNECTION" value="pgsql" force="true"/>
+        <env name="DB_HOST" value="db" force="true"/>
+        <env name="DB_PORT" value="5432" force="true"/>
+        <env name="DB_DATABASE" value="powerout_test" force="true"/>
+        <env name="DB_USERNAME" value="powerout_user" force="true"/>
+        <env name="DB_PASSWORD" value="powerout_secret" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

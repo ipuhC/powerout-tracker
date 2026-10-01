@@ -41,8 +41,11 @@ echo "--> Starting Docker Compose services (7 containers)..."
 docker compose up -d
 
 # 6. Run database migrations and seeders
-echo "--> Executing PostGIS spatial migrations and seeders..."
+echo "--> Initializing databases, spatial extensions, and seeders..."
+docker compose exec -T db psql -U powerout_user -d postgres -c "SELECT 1 FROM pg_database WHERE datname = 'powerout_test'" | grep -q 1 || docker compose exec -T db psql -U powerout_user -d postgres -c "CREATE DATABASE powerout_test;"
+docker compose exec -T db psql -U powerout_user -d powerout_test -c "CREATE EXTENSION IF NOT EXISTS postgis;"
 docker compose exec api php artisan migrate --seed --force
+docker compose exec -e DB_DATABASE=powerout_test api php artisan migrate --force
 
 echo ""
 echo "=========================================================="

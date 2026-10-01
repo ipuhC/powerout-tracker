@@ -1,0 +1,472 @@
+openapi: "3.1.0"
+
+info:
+  title: Power Outage Tracker API
+  version: "1.0.0"
+  description: |
+    RESTful JSON API for the Power Outage Reporting Platform.
+    Built with Laravel 13, PHP 8.4-FPM, PostgreSQL 16 + PostGIS and Redis.
+
+    **Authentication:** Bearer Token (Laravel Sanctum Personal Access Tokens).
+    Include the token in every protected request: `Authorization: Bearer <token>`.
+
+    **Base URL:** `http://localhost:8080/api/v1`
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Docker environment
+
+tags:
+  - name: Authentication
+    description: Register, login, logout and user profile
+  - name: Reports
+    description: Create, list, edit and close outage reports (authenticated)
+  - name: Public Map
+    description: Read-only public endpoints — no authentication required
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Shared primitives ────────────────────────────────────────────
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:    { type: string, example: VALIDATION_ERROR }
+            message: { type: string, example: "The given data was invalid." }
+            details:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
+          required: [code, message]
+
+    User:
+      type: object
+      properties:
+        id:         { type: integer, example: 1 }
+        name:       { type: string,  example: "Demo User" }
+        email:      { type: string,  format: email, example: "demo@powerout.test" }
+        created_at: { type: string,  format: date-time }
+      required: [id, name, email]
+
+    # ── Report resource (authenticated — includes user_id) ───────────
+    Report:
+      type: object
+      properties:
+        id:             { type: integer, example: 42 }
+        user_id:        { type: integer, example: 1 }
+        latitude:       { type: number,  format: float, example: 10.2135 }
+        longitude:      { type: number,  format: float, example: -68.0052 }
+        radius_km:      { type: number,  format: float, example: 2.5 }
+        duration_type:  { type: string,  enum: [fixed, until_closed] }
+        duration_hours: { type: integer, nullable: true, example: 4 }
+        status:         { type: string,  enum: [active, closed, expired] }
+        description:    { type: string,  nullable: true, maxLength: 500 }
+        expires_at:     { type: string,  format: date-time }
+        remaining_seconds: { type: integer, example: 12600 }
+        created_at:     { type: string,  format: date-time }
+        updated_at:     { type: string,  format: date-time }
+
+    # ── Public outage resource (no PII) ─────────────────────────────
+    PublicOutage:
+      type: object
+      description: "Public view — no user_id, email or name exposed."
+      properties:
+        id:             { type: integer, example: 42 }
+        latitude:       { type: number,  format: float, example: 10.2135 }
+        longitude:      { type: number,  format: float, example: -68.0052 }
+        radius_km:      { type: number,  format: float, example: 2.5 }
+        duration_type:  { type: string,  enum: [fixed, until_closed] }
+        duration_hours: { type: integer, nullable: true }
+        description:    { type: string,  nullable: true }
+        expires_at:     { type: string,  format: date-time }
+        remaining_seconds: { type: integer }
+        created_at:     { type: string,  format: date-time }
+
+paths:
+  # ════════════════════════════════════════════════════════════════
+  # AUTH
+  # ════════════════════════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      description: |
+        Creates a user account and returns a Bearer token.
+        Rate limited: 10 requests per minute per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation]
+              properties:
+                name:                  { type: string, example: "Demo User" }
+                email:                 { type: string, format: email, example: "demo@powerout.test" }
+                password:              { type: string, minLength: 8, example: "password" }
+                password_confirmation: { type: string, example: "password" }
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:  { $ref: "#/components/schemas/User" }
+                      token: { type: string, example: "1|abc123..." }
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "429":
+          description: Too many registration attempts
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login and obtain a Bearer token
+      description: Rate limited — 10 attempts per minute per IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email, example: "demo@powerout.test" }
+                password: { type: string, example: "password" }
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:  { $ref: "#/components/schemas/User" }
+                      token: { type: string, example: "1|abc123..." }
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "422":
+          description: Validation error
+        "429":
+          description: Too many login attempts
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke current Bearer token
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message: { type: string, example: "Logged out successfully." }
+        "401":
+          description: Unauthenticated
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get authenticated user profile
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user: { $ref: "#/components/schemas/User" }
+        "401":
+          description: Unauthenticated
+
+  # ════════════════════════════════════════════════════════════════
+  # REPORTS (authenticated)
+  # ════════════════════════════════════════════════════════════════
+  /reports:
+    get:
+      tags: [Reports]
+      summary: List my reports (paginated)
+      description: Returns all reports (active, closed and expired) belonging to the authenticated user.
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        "200":
+          description: Paginated list of user reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      reports:
+                        type: array
+                        items: { $ref: "#/components/schemas/Report" }
+                      meta:
+                        type: object
+                        properties:
+                          current_page: { type: integer }
+                          last_page:    { type: integer }
+                          per_page:     { type: integer }
+                          total:        { type: integer }
+        "401":
+          description: Unauthenticated
+
+    post:
+      tags: [Reports]
+      summary: Create a new outage report
+      description: |
+        Creates an outage report.
+
+        **Abuse prevention:**
+        - Maximum 5 new reports per hour per user (configurable via `OUTAGE_MAX_REPORTS_PER_HOUR`).
+        - Maximum 3 simultaneously active reports per user (configurable via `OUTAGE_MAX_ACTIVE_REPORTS`).
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude, radius_km, duration_type]
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                  minimum: -90
+                  maximum: 90
+                  example: 10.2135
+                longitude:
+                  type: number
+                  format: float
+                  minimum: -180
+                  maximum: 180
+                  example: -68.0052
+                radius_km:
+                  type: number
+                  format: float
+                  minimum: 0.5
+                  maximum: 25
+                  example: 3.0
+                duration_type:
+                  type: string
+                  enum: [fixed, until_closed]
+                duration_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 72
+                  nullable: true
+                  description: Required when duration_type is "fixed". Capped at 72 h.
+                  example: 8
+                description:
+                  type: string
+                  nullable: true
+                  maxLength: 500
+                  example: "Transformer failure on Av. Bolívar."
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      report: { $ref: "#/components/schemas/Report" }
+        "422":
+          description: Validation error or quota exceeded (QUOTA_EXCEEDED)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "429":
+          description: Rate limit exceeded (5 reports/hour)
+        "401":
+          description: Unauthenticated
+
+  /reports/{id}:
+    patch:
+      tags: [Reports]
+      summary: Edit an active report
+      description: |
+        Update radius, duration or description of an **active** report.
+        Users can only edit their **own** reports (enforced server-side via Policy).
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                radius_km:
+                  type: number
+                  format: float
+                  minimum: 0.5
+                  maximum: 25
+                duration_type:
+                  type: string
+                  enum: [fixed, until_closed]
+                duration_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 72
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+                  maxLength: 500
+      responses:
+        "200":
+          description: Report updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      report: { $ref: "#/components/schemas/Report" }
+        "403":
+          description: Forbidden — report belongs to another user
+        "404":
+          description: Report not found
+        "422":
+          description: Validation error
+        "401":
+          description: Unauthenticated
+
+  /reports/{id}/close:
+    post:
+      tags: [Reports]
+      summary: Close an active report ("Power is back")
+      description: |
+        Manually marks a report as `closed`.
+        Users can only close their **own** reports (enforced server-side via Policy).
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Report closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      report: { $ref: "#/components/schemas/Report" }
+        "403":
+          description: Forbidden — report belongs to another user
+        "404":
+          description: Report not found
+        "401":
+          description: Unauthenticated
+
+  # ════════════════════════════════════════════════════════════════
+  # PUBLIC MAP (no auth)
+  # ════════════════════════════════════════════════════════════════
+  /public/outages:
+    get:
+      tags: [Public Map]
+      summary: Get active outages within a bounding box
+      description: |
+        Returns all **active** outages whose center point falls within the
+        given geographic bounding box. Queried via PostGIS `ST_MakeEnvelope`
+        with GiST spatial index.
+
+        **Privacy:** Response is filtered through `PublicOutageResource` —
+        no `user_id`, email, name or any PII is ever exposed.
+
+        Rate limited: 60 requests per minute per IP.
+      parameters:
+        - name: min_lat
+          in: query
+          required: true
+          schema: { type: number, format: float, example: 10.15 }
+        - name: min_lng
+          in: query
+          required: true
+          schema: { type: number, format: float, example: -68.10 }
+        - name: max_lat
+          in: query
+          required: true
+          schema: { type: number, format: float, example: 10.35 }
+        - name: max_lng
+          in: query
+          required: true
+          schema: { type: number, format: float, example: -67.90 }
+      responses:
+        "200":
+          description: List of active outages in the bounding box
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      outages:
+                        type: array
+                        items: { $ref: "#/components/schemas/PublicOutage" }
+                      count:
+                        type: integer
+                        example: 7
+        "422":
+          description: Missing or invalid bounding box parameters
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "429":
+          description: Too many requests

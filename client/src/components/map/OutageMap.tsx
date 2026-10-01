@@ -23,7 +23,7 @@ function MapEvents({
   interactive?: boolean; 
   onLocationSelect?: (coords: { lat: number; lng: number }) => void;
   onBoundsChange?: (bounds: { min_lat: number; min_lng: number; max_lat: number; max_lng: number }) => void;
-  setPinnedId: (id: string | null) => void;
+  setPinnedId: (id: number | null) => void;
 }) {
   const map = useMapEvents({
     click(e) {
@@ -73,6 +73,7 @@ function CenterUpdater({ center, zoom }: { center: [number, number]; zoom: numbe
       prevZoom.current = zoom;
     }
   }, [center, zoom, map]);
+
   return null;
 }
 
@@ -86,7 +87,7 @@ export function OutageMap({
   onLocationSelect,
   onBoundsChange
 }: OutageMapProps) {
-  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [pinnedId, setPinnedId] = useState<number | null>(null);
 
   return (
     <div className="w-full h-full relative z-0">
