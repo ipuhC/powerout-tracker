@@ -26,7 +26,7 @@ jobs:
           username: ${{ github.actor }}          # Usa tu nombre de usuario automáticamente
           password: ${{ secrets.GITHUB_TOKEN }}  # Usa la llave automática de GitHub
 
-      # 3. Construye y sube la API cambiando el prefijo a ghcr.io
+      # 3. Construye y sube la API
       - name: Construir y subir API
         uses: docker/build-push-action@v4
         with:
@@ -34,10 +34,10 @@ jobs:
           file: ./api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/powerout-api:latest
-            ghcr.io/${{ github.repository_owner }}/powerout-api:${{ github.sha }}
+            ghcr.io/ipuhc/powerout-api:latest
+            ghcr.io/ipuhc/powerout-api:${{ github.sha }}
 
-      # 4. Construye y sube el Cliente cambiando el prefijo
+      # 4. Construye y sube el Cliente
       - name: Construir y subir Client
         uses: docker/build-push-action@v4
         with:
@@ -45,5 +45,5 @@ jobs:
           file: ./client/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/powerout-client:latest
-            ghcr.io/${{ github.repository_owner }}/powerout-client:${{ github.sha }}
+            ghcr.io/ipuhc/powerout-client:latest
+            ghcr.io/ipuhc/powerout-client:${{ github.sha }}
