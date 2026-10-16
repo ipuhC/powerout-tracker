@@ -1,0 +1,49 @@
+name: Construir y Subir Imagenes a GHCR
+
+on:
+  push:
+    branches:
+      - main
+
+# 1. Le damos permiso al robot para subir paquetes (imágenes)
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v3
+
+      # 2. Inicia sesión en el registro de GitHub (ghcr.io)
+      - name: Iniciar sesión en GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}          # Usa tu nombre de usuario automáticamente
+          password: ${{ secrets.GITHUB_TOKEN }}  # Usa la llave automática de GitHub
+
+      # 3. Construye y sube la API cambiando el prefijo a ghcr.io
+      - name: Construir y subir API
+        uses: docker/build-push-action@v4
+        with:
+          context: ./api
+          file: ./api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/powerout-api:latest
+            ghcr.io/${{ github.repository_owner }}/powerout-api:${{ github.sha }}
+
+      # 4. Construye y sube el Cliente cambiando el prefijo
+      - name: Construir y subir Client
+        uses: docker/build-push-action@v4
+        with:
+          context: ./client
+          file: ./client/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/powerout-client:latest
+            ghcr.io/${{ github.repository_owner }}/powerout-client:${{ github.sha }}
