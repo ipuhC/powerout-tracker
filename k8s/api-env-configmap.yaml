@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laravel-env-config
+  namespace: default
+data:
+  APP_NAME: "MiApp"
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_URL: "http://192.168.15.155"
+  
+  # Configuración de Base de Datos (PostgreSQL + PostGIS)
+  DB_CONNECTION: "pgsql"
+  DB_HOST: "postgres-service" # Nombre del servicio de DB en k3s
+  DB_PORT: "5432"
+  DB_DATABASE: "powerout_db"
+  DB_USERNAME: "admin"
+  
+  # Configuración de Redis
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  CACHE_DRIVER: "redis"
+  QUEUE_CONNECTION: "redis"
+  SESSION_DRIVER: "redis"

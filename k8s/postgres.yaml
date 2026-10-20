@@ -1,0 +1,73 @@
+---
+# 1. Almacenamiento Persistente (PVC)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi # k3s creará este volumen automáticamente
+---
+# 2. Deployment de PostgreSQL + PostGIS
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-deployment
+spec:
+  serviceName: "postgres-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgis/postgis:15-3.4 # Imagen oficial con soporte geoespacial
+          ports:
+            - containerPort: 5432
+          env:
+            # Lee el nombre de la DB del ConfigMap de Laravel
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: laravel-env-config
+                  key: DB_DATABASE
+            # Lee el usuario del ConfigMap de Laravel
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: laravel-env-config
+                  key: DB_USERNAME
+            # Lee la contraseña del Secret de Laravel
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: laravel-secrets
+                  key: DB_PASSWORD
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+# 3. Servicio de red interno (DNS: postgres-service)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432 

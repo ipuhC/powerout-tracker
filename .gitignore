@@ -26,3 +26,8 @@ Thumbs.db
 
 # Logs and databases
 *.log
+
+# Kubernetes Secrets
+k8s/*secret*.yaml
+!k8s/*secret*.example.yaml
+!k8s/*.example

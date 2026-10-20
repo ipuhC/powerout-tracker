@@ -44,8 +44,15 @@ RUN { \
     echo 'opcache.revalidate_freq = 0;'; \
 } > /usr/local/etc/php/conf.d/custom.ini
 
+# Copy application code
+COPY . /var/www/html
+
+# Install Composer production dependencies
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
 # Ensure www-data has correct permissions on working directory
-RUN chown -R www-data:www-data /var/www/html
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Expose PHP-FPM port
 EXPOSE 9000
@@ -54,3 +61,4 @@ EXPOSE 9000
 USER www-data
 
 CMD ["php-fpm"]
+
