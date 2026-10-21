@@ -3,32 +3,23 @@ FROM php:8.4-fpm-alpine
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies & libraries required for PostGIS/PostgreSQL, Redis, and ZIP
-RUN apk update && apk add --no-cache \
-    postgresql-dev \
-    libzip-dev \
-    zip \
-    unzip \
+# Install system dependencies needed by git/composer
+RUN apk add --no-cache \
     git \
     curl \
-    linux-headers \
-    $PHPIZE_DEPS
+    zip \
+    unzip
 
-# Install and configure PHP extensions
-RUN docker-php-ext-install -j$(nproc) \
+# Install PHP extensions using official installer helper (resolves PECL issues in PHP 8.4 Alpine)
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+RUN install-php-extensions \
     pdo_pgsql \
     pgsql \
     bcmath \
     pcntl \
     opcache \
-    zip
-
-# Install and enable Redis extension via PECL
-RUN pecl install redis && \
-    docker-php-ext-enable redis
-
-# Clean up dev dependencies to keep image lean
-RUN apk del $PHPIZE_DEPS && rm -rf /var/cache/apk/*
+    zip \
+    redis
 
 # Install Composer from official Composer image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
