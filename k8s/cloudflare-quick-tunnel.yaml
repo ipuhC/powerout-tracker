@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflare-quick-tunnel
+  namespace: default
+  labels:
+    app: cloudflare-quick-tunnel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflare-quick-tunnel
+  template:
+    metadata:
+      labels:
+        app: cloudflare-quick-tunnel
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - tunnel
+            - --url
+            - http://ingress-nginx-controller.ingress-nginx.svc.cluster.local:80
+            - --no-autoupdate
+          resources:
+            limits:
+              memory: 256Mi
+              cpu: 200m
+            requests:
+              memory: 64Mi
+              cpu: 50m

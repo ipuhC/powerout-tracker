@@ -9,8 +9,8 @@ data:
         listen 80;
         server_name _;
         
-        # El directorio donde reside tu código dentro del contenedor PHP
-        root /var/www/html/public; 
+        # El directorio base existente dentro del contenedor NGINX
+        root /usr/share/nginx/html; 
         
         add_header X-Frame-Options "SAMEORIGIN";
         add_header X-Content-Type-Options "nosniff";
@@ -27,13 +27,12 @@ data:
         location = /favicon.ico { access_log off; log_not_found off; }
         location = /robots.txt  { access_log off; log_not_found off; }
         
-        error_page 404 /index.php;
-        
         # 2. Pasa la ejecución de PHP al contenedor PHP-FPM sidecar
         location ~ \.php$ {
             fastcgi_pass 127.0.0.1:9000;
-            fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
             include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+            fastcgi_param DOCUMENT_ROOT /var/www/html/public;
             fastcgi_hide_header X-Powered-By;
         }
         

@@ -27,7 +27,9 @@ Thumbs.db
 # Logs and databases
 *.log
 
-# Kubernetes Secrets
+# Kubernetes Secrets & Sensitive tokens
 k8s/*secret*.yaml
+k8s/*token*.yaml
 !k8s/*secret*.example.yaml
+!k8s/*token*.example.yaml
 !k8s/*.example

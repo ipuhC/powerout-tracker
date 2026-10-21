@@ -20,6 +20,7 @@ spec:
         # ----------------------------------------
         - name: php-fpm
           image: ghcr.io/ipuhc/powerout-api:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 9000
           # Aquí inyectamos el ConfigMap y el Secret completos
