@@ -7,7 +7,7 @@ data:
   APP_NAME: "MiApp"
   APP_ENV: "production"
   APP_DEBUG: "false"
-  APP_URL: "https://carey-pearl-pics-gossip.trycloudflare.com/"
+  APP_URL: "https://carey-pearl-pics-gossip.trycloudflare.com"
   
   # Configuración de Base de Datos (PostgreSQL + PostGIS)
   DB_CONNECTION: "pgsql"
